@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Feed for User {{ user.user_id }} - Event Feed{% endblock %}
+
+{% block content %}
+<nav>
+    <a href="/">&larr; Back to User Selection</a>
+</nav>
+
+<div class="card">
+    <h2>User Profile</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
+        <div>
+            <div class="meta">User ID</div>
+            <div class="score">{{ user.user_id }}</div>
+        </div>
+        <div>
+            <div class="meta">Age Bucket</div>
+            <div><span class="badge badge-blue">{{ user.age_bucket }}</span></div>
+        </div>
+        <div>
+            <div class="meta">Schedule Type</div>
+            <div>
+                {% if user.schedule_type == 'morning' %}
+                <span class="badge badge-yellow">Morning Person</span>
+                {% elif user.schedule_type == 'night' %}
+                <span class="badge badge-blue">Night Owl</span>
+                {% else %}
+                <span class="badge badge-green">Flexible</span>
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            <div class="meta">Home Geo Cell</div>
+            <div>{{ user.home_geo_cell }}</div>
+        </div>
+        <div>
+            <div class="meta">Number of Friends</div>
+            <div>{{ user.n_friends }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Personalized Event Feed ({{ feed|length }} events)</h2>
+    <p class="meta" style="margin-bottom: 20px;">
+        Events ranked by a fusion of content match, availability, social signals, and distance.
+    </p>
+
+    {% for item in feed %}
+    <div class="card" style="border-left: 4px solid {% if item.availability_fit %}#28a745{% else %}#dc3545{% endif %};">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h3 style="margin-bottom: 10px;">
+                    <a href="/event/{{ item.event_id }}?user_id={{ user.user_id }}" style="color: #333; text-decoration: none;">
+                        Event #{{ item.event_id }} - Category {{ item.category }}
+                    </a>
+                </h3>
+                <div class="meta" style="margin-bottom: 10px;">
+                    <strong>Start:</strong> {{ item.start_time }} |
+                    <strong>Duration:</strong> {{ item.duration_min }} min |
+                    <strong>Capacity:</strong> {{ item.capacity }}
+                </div>
+                <div style="margin-bottom: 15px;">
+                    {% if item.availability_fit %}
+                    <span class="badge badge-green">Available</span>
+                    {% else %}
+                    <span class="badge badge-red">Not Available</span>
+                    {% if item.next_feasible_hours %}
+                    <span class="meta"> - Next slot in {{ item.next_feasible_hours }}h</span>
+                    {% endif %}
+                    {% endif %}
+
+                    {% if item.friend_intent_count > 0 %}
+                    <span class="badge badge-blue">{{ item.friend_intent_count }} friend(s) going</span>
+                    {% endif %}
+
+                    {% if item.friend_feasible_count > 0 %}
+                    <span class="badge badge-yellow">{{ item.friend_feasible_count }} friend(s) can attend</span>
+                    {% endif %}
+
+                    <span class="badge">{{ item.distance_km }} km away</span>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div class="score">{{ "%.3f"|format(item.final_score) }}</div>
+                <div class="meta">Final Score</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 15px;">
+            <strong>Why This Event?</strong>
+            <div style="margin-top: 10px;">
+                {% for factor in item.why %}
+                <div class="factor-bar">
+                    <span class="factor-name">{{ factor.name }}</span>
+                    <div class="factor-value">
+                        <div class="factor-fill {{ factor.impact }}"
+                             style="width: {% if factor.impact == 'high' %}80{% elif factor.impact == 'neutral' %}50{% else %}20{% endif %}%;"></div>
+                    </div>
+                    <span style="width: 60px; text-align: right; font-size: 12px;">{{ factor.value }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div style="margin-top: 15px;">
+            <a href="/event/{{ item.event_id }}?user_id={{ user.user_id }}" class="btn">View Details</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

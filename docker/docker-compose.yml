@@ -1,0 +1,99 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: social-event-recommender
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ../data:/app/data
+      - ../models:/app/models
+      - ../runs:/app/runs
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: python -m src.serve.app
+
+  # Optional: Run full pipeline
+  pipeline:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: social-event-pipeline
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ../data:/app/data
+      - ../models:/app/models
+      - ../runs:/app/runs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - pipeline
+    command: >
+      bash -c "
+        python -m src.data.gen_synth &&
+        python -m src.data.derive_availability &&
+        python -m src.data.build_candidates &&
+        python -m src.train.train_two_tower &&
+        python -m src.train.train_gnn
+      "
+
+  # Quick demo with small dataset
+  demo:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: social-event-demo
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ../data:/app/data
+      - ../models:/app/models
+      - ../runs:/app/runs
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - demo
+    command: >
+      bash -c "
+        echo 'Generating synthetic data...' &&
+        python -m src.data.gen_synth --small &&
+        echo 'Deriving availability...' &&
+        python -m src.data.derive_availability --small &&
+        echo 'Building candidates...' &&
+        python -m src.data.build_candidates --small &&
+        echo 'Training two-tower model...' &&
+        python -m src.train.train_two_tower --small &&
+        echo 'Training GNN...' &&
+        python -m src.train.train_gnn --small &&
+        echo 'Starting server...' &&
+        python -m src.serve.app --small
+      "

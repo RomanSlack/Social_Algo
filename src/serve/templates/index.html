@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Select User - Event Feed{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Select a User to View Their Feed</h2>
+    <p class="meta" style="margin-bottom: 20px;">
+        Choose a user below to see their personalized event recommendations.
+        The feed is ranked using a combination of:
+    </p>
+    <ul style="margin-left: 20px; margin-bottom: 20px;">
+        <li>Two-tower retrieval model (content similarity)</li>
+        <li>Temporal heterogeneous GNN (social signals)</li>
+        <li>Calendar availability matching</li>
+        <li>Friend intent and feasibility</li>
+    </ul>
+
+    <table>
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Age Bucket</th>
+                <th>Schedule Type</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.user_id }}</td>
+                <td><span class="badge badge-blue">{{ user.age_bucket }}</span></td>
+                <td>
+                    {% if user.schedule_type == 'morning' %}
+                    <span class="badge badge-yellow">Morning Person</span>
+                    {% elif user.schedule_type == 'night' %}
+                    <span class="badge badge-blue">Night Owl</span>
+                    {% else %}
+                    <span class="badge badge-green">Flexible</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="/feed/{{ user.user_id }}" class="btn">View Feed</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>About This Demo</h2>
+    <p class="meta">
+        This is a prototype calendar-aware social event feed recommender.
+        It demonstrates:
+    </p>
+    <ul style="margin-left: 20px; margin-top: 10px;">
+        <li><strong>Synthetic Data:</strong> Generated users, events, venues, friendships, and calendar busy blocks</li>
+        <li><strong>Two-Tower Model:</strong> User and event towers trained with BPR loss for retrieval</li>
+        <li><strong>Temporal GNN:</strong> Heterogeneous graph with user-user, user-event, and event-venue edges</li>
+        <li><strong>Availability Matching:</strong> Checks user calendar against event times</li>
+        <li><strong>Social Proof:</strong> Friend intents and feasibility boost ranking</li>
+    </ul>
+</div>
+{% endblock %}

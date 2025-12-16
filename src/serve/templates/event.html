@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Event {{ event.event_id }} - Event Feed{% endblock %}
+
+{% block content %}
+<nav>
+    <a href="/feed/{{ user_id }}">&larr; Back to Feed</a>
+</nav>
+
+<div class="card">
+    <h2>Event #{{ event.event_id }}</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+        <div>
+            <div class="meta">Start Time</div>
+            <div style="font-size: 18px;">{{ event.start_time }}</div>
+        </div>
+        <div>
+            <div class="meta">Duration</div>
+            <div style="font-size: 18px;">{{ event.duration_min }} minutes</div>
+        </div>
+        <div>
+            <div class="meta">Category</div>
+            <div style="font-size: 18px;">Category {{ event.category }}</div>
+        </div>
+        <div>
+            <div class="meta">Capacity</div>
+            <div style="font-size: 18px;">{{ event.capacity }} people</div>
+        </div>
+        <div>
+            <div class="meta">Venue</div>
+            <div style="font-size: 18px;">Venue #{{ event.venue_id }} (Geo: {{ event.venue_geo }})</div>
+        </div>
+        <div>
+            <div class="meta">Total Intents</div>
+            <div style="font-size: 18px;">{{ event.total_intents }} people interested</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Your Availability</h2>
+    {% if event.user_available %}
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="badge badge-green" style="font-size: 16px; padding: 10px 15px;">You're Available!</span>
+        <span class="meta">This event fits your calendar.</span>
+    </div>
+    {% else %}
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="badge badge-red" style="font-size: 16px; padding: 10px 15px;">Not Available</span>
+        {% if event.next_feasible_hours %}
+        <span class="meta">Your next free slot is in {{ event.next_feasible_hours }} hours.</span>
+        {% else %}
+        <span class="meta">No compatible time slots found.</span>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Friends Who Can Attend</h2>
+    <p class="meta" style="margin-bottom: 20px;">
+        Friends are sorted by: those going first, then those available, then others.
+    </p>
+
+    {% set friends_going = event.friends | selectattr('has_intent') | selectattr('is_available') | list %}
+    {% set friends_available = event.friends | selectattr('is_available') | rejectattr('has_intent') | list %}
+    {% set friends_intent_only = event.friends | selectattr('has_intent') | rejectattr('is_available') | list %}
+    {% set friends_other = event.friends | rejectattr('has_intent') | rejectattr('is_available') | list %}
+
+    {% if friends_going %}
+    <h3 style="color: #28a745; margin-bottom: 10px;">Going & Available ({{ friends_going|length }})</h3>
+    <div class="friend-list" style="margin-bottom: 20px;">
+        {% for friend in friends_going %}
+        <div class="friend-item" style="border-left: 3px solid #28a745;">
+            <strong>User #{{ friend.user_id }}</strong>
+            <div>
+                <span class="badge badge-green">Going</span>
+                <span class="badge badge-green">Available</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if friends_available %}
+    <h3 style="color: #ffc107; margin-bottom: 10px;">Available ({{ friends_available|length }})</h3>
+    <div class="friend-list" style="margin-bottom: 20px;">
+        {% for friend in friends_available %}
+        <div class="friend-item" style="border-left: 3px solid #ffc107;">
+            <strong>User #{{ friend.user_id }}</strong>
+            <div>
+                <span class="badge badge-yellow">Available</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if friends_intent_only %}
+    <h3 style="color: #17a2b8; margin-bottom: 10px;">Interested but Busy ({{ friends_intent_only|length }})</h3>
+    <div class="friend-list" style="margin-bottom: 20px;">
+        {% for friend in friends_intent_only %}
+        <div class="friend-item" style="border-left: 3px solid #17a2b8;">
+            <strong>User #{{ friend.user_id }}</strong>
+            <div>
+                <span class="badge badge-blue">Interested</span>
+                <span class="badge badge-red">Busy</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if friends_other %}
+    <h3 style="color: #6c757d; margin-bottom: 10px;">Other Friends ({{ friends_other|length }})</h3>
+    <div class="friend-list">
+        {% for friend in friends_other[:10] %}
+        <div class="friend-item" style="border-left: 3px solid #6c757d;">
+            <strong>User #{{ friend.user_id }}</strong>
+            <div>
+                <span class="badge badge-red">Busy</span>
+                {% if friend.next_feasible_hours %}
+                <span class="meta">Free in {{ friend.next_feasible_hours }}h</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% if friends_other|length > 10 %}
+        <div class="friend-item" style="background: #e9ecef;">
+            <em>... and {{ friends_other|length - 10 }} more</em>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if not event.friends %}
+    <p class="meta">No friends found.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Actions</h2>
+    <p class="meta" style="margin-bottom: 15px;">
+        (In a real app, these would trigger actual actions)
+    </p>
+    <button class="btn" onclick="alert('Intent recorded!')">Mark as Interested</button>
+    <button class="btn" style="background: #28a745;" onclick="alert('Attendance confirmed!')">Confirm Attendance</button>
+    <button class="btn" style="background: #6c757d;" onclick="alert('Event saved!')">Save for Later</button>
+</div>
+{% endblock %}
