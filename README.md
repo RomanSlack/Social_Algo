@@ -2,6 +2,11 @@
 
 A local, reproducible sandbox for prototyping a calendar-aware social event feed recommender using a temporal heterogeneous Graph Neural Network (GNN). This project demonstrates an end-to-end ML recommendation system with a web UI for inspection.
 
+<p align="center">
+  <img src="docs/gnn_1.png" alt="GNN Architecture 1" width="45%">
+  <img src="docs/gnn_2.png" alt="GNN Architecture 2" width="45%">
+</p>
+
 ## Features
 
 - **Synthetic Data Generation**: Creates realistic users, friendships (with communities), events, venues, calendars, and user actions
