@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Calendar-Aware Social Event Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --text-muted: #6b7280;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-code: #f1f3f5;
+            --accent: #2563eb;
+            --accent-light: #dbeafe;
+            --border: #e5e7eb;
+            --serif: 'Source Serif 4', Georgia, serif;
+            --sans: 'Inter', -apple-system, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow: hidden;
+        }
+
+        .slideshow {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 56px); /* Leave room for nav */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding: 10px 3vw;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(50px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            overflow: hidden;
+        }
+
+        .slide.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0);
+        }
+
+        @media (min-width: 768px) {
+            .slide {
+                padding: 4vh 8vw 3vh;
+                height: calc(100vh - 70px);
+            }
+        }
+
+        /* Typography */
+        h1 {
+            font-family: var(--serif);
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        h2 {
+            font-family: var(--serif);
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        h3 {
+            font-family: var(--serif);
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        p, li {
+            font-size: clamp(0.95rem, 2vw, 1.1rem);
+            color: var(--text-secondary);
+            max-width: 65ch;
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        ul {
+            list-style: none;
+            margin: 1rem 0;
+        }
+
+        li {
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        li::before {
+            content: "—";
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+        }
+
+        /* Code and diagrams */
+        .diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: clamp(1rem, 3vw, 2rem);
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .diagram pre {
+            font-family: var(--mono);
+            font-size: clamp(0.7rem, 1.5vw, 0.85rem);
+            color: var(--text-secondary);
+            white-space: pre;
+            line-height: 1.5;
+        }
+
+        code {
+            font-family: var(--mono);
+            font-size: 0.9em;
+            background: var(--bg-code);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+        }
+
+        .code-block {
+            background: var(--bg-secondary);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 1.25rem 1.5rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            background: none;
+            padding: 0;
+            font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+            line-height: 1.7;
+            display: block;
+        }
+
+        /* Layout helpers */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .two-col {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        @media (min-width: 600px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 900px) {
+            .grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+
+        .card h4 {
+            font-family: var(--serif);
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .card p {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: clamp(0.85rem, 1.8vw, 1rem);
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            text-align: left;
+        }
+
+        th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        td {
+            color: var(--text-secondary);
+        }
+
+        /* Tags */
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .tag {
+            background: var(--accent-light);
+            color: var(--accent);
+            padding: 0.35rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Formula */
+        .formula {
+            font-family: var(--serif);
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            font-style: italic;
+            text-align: center;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            color: var(--text-primary);
+        }
+
+        /* Flow diagram */
+        .flow {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+        }
+
+        .flow-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .flow-box.accent {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        .flow-arrow {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        /* Highlight */
+        .hl {
+            background: #fef3c7;
+            padding: 0.1em 0.3em;
+            border-radius: 3px;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            height: calc(56px + env(safe-area-inset-bottom, 0px));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 0.75rem;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            z-index: 100;
+        }
+
+        @media (min-width: 768px) {
+            .nav {
+                height: 70px;
+                padding: 0 2rem;
+            }
+        }
+
+        .nav button {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.5rem 0.9rem;
+            font-size: 0.85rem;
+            font-family: var(--sans);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        @media (min-width: 768px) {
+            .nav button {
+                padding: 0.6rem 1.25rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        .nav button:hover {
+            background: var(--border);
+        }
+
+        .nav button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .progress-info {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--accent);
+            transition: width 0.3s ease;
+            z-index: 101;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 600px) {
+            h2 {
+                margin-bottom: 0.75rem;
+                padding-bottom: 0.5rem;
+                font-size: 1.3rem;
+            }
+
+            h3 {
+                font-size: 1rem;
+                margin-top: 0.75rem;
+                margin-bottom: 0.5rem;
+            }
+
+            p, li {
+                font-size: 0.9rem;
+            }
+
+            .diagram {
+                padding: 0.5rem;
+                margin: 0.75rem 0;
+            }
+
+            .diagram pre {
+                font-size: 0.55rem;
+                line-height: 1.4;
+            }
+
+            .code-block {
+                padding: 0.5rem 0.75rem;
+                margin: 0.5rem 0;
+            }
+
+            .code-block code {
+                font-size: 0.75rem;
+            }
+
+            table {
+                font-size: 0.75rem;
+                margin: 0.75rem 0;
+            }
+
+            th, td {
+                padding: 0.4rem 0.5rem;
+            }
+
+            .card {
+                padding: 0.6rem;
+            }
+
+            .card h4 {
+                font-size: 0.95rem;
+            }
+
+            .card p {
+                font-size: 0.8rem;
+            }
+
+            .grid {
+                gap: 0.5rem;
+                margin-top: 0.75rem;
+            }
+
+            .two-col {
+                gap: 1rem;
+            }
+
+            .formula {
+                padding: 0.75rem;
+                font-size: 0.9rem;
+                margin: 0.75rem 0;
+            }
+
+            .flow {
+                gap: 0.4rem;
+                margin: 0.75rem 0;
+            }
+
+            .flow-box {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.75rem;
+            }
+
+            .flow-arrow {
+                font-size: 1rem;
+            }
+
+            ul {
+                margin: 0.5rem 0;
+            }
+
+            li {
+                margin: 0.4rem 0;
+                padding-left: 1.25rem;
+            }
+
+            .section-num {
+                font-size: 0.75rem;
+                margin-bottom: 0.25rem;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 380px) {
+            .slide {
+                padding: 12px 3vw 15px;
+            }
+
+            h2 {
+                font-size: 1.15rem;
+            }
+
+            .diagram pre {
+                font-size: 0.5rem;
+            }
+
+            .nav button {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.8rem;
+            }
+
+            .progress-info {
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Title slide special */
+        .title-slide {
+            justify-content: center;
+            text-align: center;
+        }
+
+        .title-slide h1 {
+            font-size: clamp(1.5rem, 5vw, 3.5rem);
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .title-slide {
+                padding-top: 10vh;
+                justify-content: flex-start;
+            }
+
+            .title-slide h1 {
+                font-size: 1.4rem;
+                line-height: 1.3;
+            }
+
+            .title-slide .subtitle {
+                font-size: 0.95rem;
+                margin-bottom: 1rem;
+            }
+
+            .title-slide .tags {
+                margin-top: 1rem;
+            }
+
+            .title-slide .tag {
+                font-size: 0.75rem;
+                padding: 0.25rem 0.5rem;
+            }
+        }
+
+        .author {
+            margin-top: 3rem;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Section number */
+        .section-num {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Compact list for mobile */
+        .compact-list li {
+            margin: 0.5rem 0;
+        }
+
+        /* Scrollable content */
+        .slide-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progress"></div>
+
+    <div class="slideshow">
+        <!-- Slide 1: Title -->
+        <div class="slide title-slide active">
+            <h1>Calendar-Aware Social Event Recommendation</h1>
+            <p class="subtitle">A Temporal Heterogeneous Graph Neural Network Approach</p>
+            <div class="tags">
+                <span class="tag">PyTorch</span>
+                <span class="tag">Graph Neural Networks</span>
+                <span class="tag">Recommendation Systems</span>
+                <span class="tag">Temporal Modeling</span>
+            </div>
+            <p class="author">Technical Overview</p>
+        </div>
+
+        <!-- Slide 2: Problem -->
+        <div class="slide">
+            <p class="section-num">01</p>
+            <h2>Problem Statement</h2>
+            <div class="two-col">
+                <div>
+                    <h3>Limitations of Existing Systems</h3>
+                    <ul class="compact-list">
+                        <li>Recommend based on content similarity alone</li>
+                        <li>Ignore user availability constraints</li>
+                        <li>No consideration of social context</li>
+                        <li>Surface events users cannot attend</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Our Contributions</h3>
+                    <ul class="compact-list">
+                        <li>Calendar-aware feasibility scoring</li>
+                        <li>Social proof via friend intent signals</li>
+                        <li>Heterogeneous GNN for multi-relational learning</li>
+                        <li>Explainable ranking factors</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Architecture -->
+        <div class="slide">
+            <p class="section-num">02</p>
+            <h2>System Architecture</h2>
+            <div class="diagram">
+                <pre>
+┌────────────────────────────────────────────────────────────┐
+│                      User Request                          │
+└──────────────────────────┬─────────────────────────────────┘
+                           ▼
+┌────────────────────────────────────────────────────────────┐
+│  Candidate Generation: Two-Tower Model                     │
+│  user_embedding · event_embedding → similarity scores      │
+└──────────────────────────┬─────────────────────────────────┘
+                           ▼
+┌────────────────────────────────────────────────────────────┐
+│  Feature Engineering                                       │
+│  availability | distance | friend_intent | category_match  │
+└──────────────────────────┬─────────────────────────────────┘
+                           ▼
+┌────────────────────────────────────────────────────────────┐
+│  Temporal Heterogeneous GNN (HGTConv)                      │
+│  Refines embeddings via social + interaction edges         │
+└──────────────────────────┬─────────────────────────────────┘
+                           ▼
+┌────────────────────────────────────────────────────────────┐
+│  Fusion Reranker: MLP([tt_sim, gnn_emb, features])         │
+└──────────────────────────┬─────────────────────────────────┘
+                           ▼
+                    Ranked Event Feed
+                </pre>
+            </div>
+        </div>
+
+        <!-- Slide 4: Data Model -->
+        <div class="slide">
+            <p class="section-num">03</p>
+            <h2>Data Model</h2>
+            <div class="grid">
+                <div class="card">
+                    <h4>Users</h4>
+                    <p>ID, geo_cell, age_bucket, interest_vector (16-dim), schedule_type</p>
+                </div>
+                <div class="card">
+                    <h4>Events</h4>
+                    <p>ID, venue_id, start_time, duration, category, capacity</p>
+                </div>
+                <div class="card">
+                    <h4>Venues</h4>
+                    <p>ID, geo_cell, category_vector (multi-hot), popularity</p>
+                </div>
+                <div class="card">
+                    <h4>Friendships</h4>
+                    <p>Undirected edges generated via Stochastic Block Model</p>
+                </div>
+                <div class="card">
+                    <h4>Calendars</h4>
+                    <p>Busy blocks: (user_id, start, end) over 14-day horizon</p>
+                </div>
+                <div class="card">
+                    <h4>Actions</h4>
+                    <p>Engagement funnel: view → like → save → intent → attend</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Synthetic Generation -->
+        <div class="slide">
+            <p class="section-num">04</p>
+            <h2>Synthetic Data Generation</h2>
+            <div class="two-col">
+                <div>
+                    <h3>Community Structure</h3>
+                    <div class="code-block">
+                        <code>P(edge | same community) = 0.15
+P(edge | diff community) = 0.01
+
+interest[u] = gaussian_noise
+            + community_bias[c]</code>
+                    </div>
+                </div>
+                <div>
+                    <h3>Action Probability</h3>
+                    <div class="code-block">
+                        <code>score = interest_match
+      × distance_penalty
+      × <span class="hl">availability_boost (3×)</span>
+      × <span class="hl">social_proof (2× per friend)</span></code>
+                    </div>
+                </div>
+            </div>
+            <p style="margin-top: 1.5rem;">
+                <strong>Key design choice:</strong> Availability is made strongly predictive to demonstrate calendar-awareness.
+            </p>
+        </div>
+
+        <!-- Slide 6: Two-Tower -->
+        <div class="slide">
+            <p class="section-num">05</p>
+            <h2>Two-Tower Retrieval Model</h2>
+            <div class="flow">
+                <div class="flow-box">User Features</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box accent">User Tower (MLP)</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">u ∈ ℝ⁶⁴</div>
+            </div>
+            <div class="flow">
+                <div class="flow-box">Event Features</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box accent">Event Tower (MLP)</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">e ∈ ℝ⁶⁴</div>
+            </div>
+            <div class="formula">
+                score(u, e) = u<sup>T</sup>e / (‖u‖ · ‖e‖)
+            </div>
+            <h3>Training Objective: BPR Loss</h3>
+            <div class="formula">
+                L = −log σ(score(u, e⁺) − score(u, e⁻))
+            </div>
+            <p>Negative sampling: 10 random events per positive interaction.</p>
+        </div>
+
+        <!-- Slide 7: Features -->
+        <div class="slide">
+            <p class="section-num">06</p>
+            <h2>Engineered Features</h2>
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><strong>AvailabilityFit</strong></td>
+                    <td>Binary: event time ⊆ user free slots (with travel buffer)</td>
+                </tr>
+                <tr>
+                    <td><strong>NextFeasibleHours</strong></td>
+                    <td>Hours until user's next compatible time window</td>
+                </tr>
+                <tr>
+                    <td><strong>DistanceKm</strong></td>
+                    <td>Euclidean distance between user home and venue geo-cells</td>
+                </tr>
+                <tr>
+                    <td><strong>FriendIntentCount</strong></td>
+                    <td>Number of friends who expressed intent for this event</td>
+                </tr>
+                <tr>
+                    <td><strong>FriendFeasibleCount</strong></td>
+                    <td>Number of friends whose calendars permit attendance</td>
+                </tr>
+                <tr>
+                    <td><strong>CategoryMatch</strong></td>
+                    <td>Dot product of user interest vector and event category embedding</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Slide 8: Graph Structure -->
+        <div class="slide">
+            <p class="section-num">07</p>
+            <h2>Heterogeneous Graph Structure</h2>
+            <div class="diagram">
+                <pre>
+Node Types:
+  • user  (N = 500)
+  • event (N = 3,000)
+  • venue (N = 50)
+
+Edge Types:
+  • (user, friend, user)      — social connections
+  • (user, view, event)       — browsing behavior
+  • (user, like, event)       — explicit positive signal
+  • (user, save, event)       — bookmark action
+  • (user, intent, event)     — stated interest (supervision target)
+  • (user, attend, event)     — actual attendance
+  • (event, hosted_at, venue) — location relation
+
+All user→event edges have reverse edges (event→user) for bidirectional propagation.
+                </pre>
+            </div>
+        </div>
+
+        <!-- Slide 9: HGT -->
+        <div class="slide">
+            <p class="section-num">08</p>
+            <h2>Heterogeneous Graph Transformer</h2>
+            <p>We employ HGTConv (Hu et al., 2020) for type-aware message passing:</p>
+            <ul>
+                <li>Separate attention weights per (source_type, edge_type, target_type) triplet</li>
+                <li>Multi-head attention (4 heads) captures diverse relation semantics</li>
+                <li>2-layer architecture with residual connections</li>
+            </ul>
+            <div class="code-block">
+                <code>for layer in range(num_layers):
+    h_dict = HGTConv(h_dict, edge_index_dict)
+    h_dict = {k: dropout(relu(v)) for k, v in h_dict.items()}
+
+user_emb_gnn = L2_normalize(h_dict['user'])
+event_emb_gnn = L2_normalize(h_dict['event'])</code>
+            </div>
+        </div>
+
+        <!-- Slide 10: Message Passing -->
+        <div class="slide">
+            <p class="section-num">09</p>
+            <h2>Message Passing Intuition</h2>
+            <div class="two-col">
+                <div>
+                    <h3>Information Flow</h3>
+                    <ul>
+                        <li>Users aggregate preferences from friends</li>
+                        <li>Events aggregate signals from interested users</li>
+                        <li>Venues propagate characteristics to hosted events</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Learned Representations</h3>
+                    <ul>
+                        <li>User embeddings encode social context</li>
+                        <li>Event embeddings capture audience patterns</li>
+                        <li>Similar users/events cluster in embedding space</li>
+                    </ul>
+                </div>
+            </div>
+            <p style="margin-top: 1.5rem;">
+                <strong>Example:</strong> If friends A and B both liked Event X, and C is friends with A and B,
+                then C's embedding will shift toward Event X through two-hop message passing.
+            </p>
+        </div>
+
+        <!-- Slide 11: Temporal Split -->
+        <div class="slide">
+            <p class="section-num">10</p>
+            <h2>Temporal Evaluation Protocol</h2>
+            <div class="diagram">
+                <pre>
+Timeline:    Day 1 ──────────── Day 10 ─── Day 12 ─── Day 14
+                    │                  │          │          │
+                    └── TRAIN ─────────┘   VAL    │   TEST   │
+                                                  │          │
+
+Key principle: No future information leakage
+
+• Training graph includes only edges with timestamp ≤ day 10
+• Validation evaluates on days 11-12 interactions
+• Test evaluates on days 13-14 interactions
+• Simulates realistic deployment conditions
+                </pre>
+            </div>
+        </div>
+
+        <!-- Slide 12: Reranker -->
+        <div class="slide">
+            <p class="section-num">11</p>
+            <h2>Fusion Reranker</h2>
+            <p>Final ranking combines all signals via a learned MLP:</p>
+            <div class="flow">
+                <div class="flow-box">TT Similarity</div>
+                <div class="flow-box">GNN Embeddings</div>
+                <div class="flow-box">Eng. Features</div>
+            </div>
+            <div style="text-align: center; margin: 1rem 0;">
+                <span class="flow-arrow">↓</span>
+            </div>
+            <div class="flow">
+                <div class="flow-box accent" style="min-width: 200px;">
+                    MLP: [input] → 64 → 32 → 1<br>
+                    <small>BatchNorm, Dropout(0.1)</small>
+                </div>
+            </div>
+            <div style="text-align: center; margin: 1rem 0;">
+                <span class="flow-arrow">↓</span>
+            </div>
+            <div class="flow">
+                <div class="flow-box">Final Score</div>
+            </div>
+            <p style="margin-top: 1rem;">
+                <strong>Training:</strong> Binary cross-entropy on intent labels. The reranker learns optimal feature weighting.
+            </p>
+        </div>
+
+        <!-- Slide 13: Serving -->
+        <div class="slide">
+            <p class="section-num">12</p>
+            <h2>Serving Architecture</h2>
+            <div class="grid">
+                <div class="card">
+                    <h4>Feed Generation</h4>
+                    <p>Compute TT scores for all events, extract top-K, apply reranker</p>
+                </div>
+                <div class="card">
+                    <h4>Availability Check</h4>
+                    <p>Intersect event time window with user free slots (15-min buckets)</p>
+                </div>
+                <div class="card">
+                    <h4>Social Features</h4>
+                    <p>Real-time lookup of friend intents and feasibility counts</p>
+                </div>
+                <div class="card">
+                    <h4>Explainability</h4>
+                    <p>Surface top contributing factors per recommendation</p>
+                </div>
+            </div>
+            <h3>API Endpoints</h3>
+            <div class="code-block">
+                <code>GET /feed/{user_id}         → ranked event list with scores
+GET /event/{event_id}?user_id=X → event details + friend availability
+GET /api/feed/{user_id}     → JSON response for programmatic access</code>
+            </div>
+        </div>
+
+        <!-- Slide 14: Results -->
+        <div class="slide">
+            <p class="section-num">13</p>
+            <h2>Implementation Details</h2>
+            <div class="two-col">
+                <div>
+                    <h3>Configuration</h3>
+                    <ul class="compact-list">
+                        <li>Users: 500 (small) / 5,000 (full)</li>
+                        <li>Events: 3,000 / 30,000</li>
+                        <li>Embedding dimension: 64</li>
+                        <li>GNN: 2 layers, 4 heads</li>
+                        <li>Training: 5-20 epochs</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Stack</h3>
+                    <ul class="compact-list">
+                        <li>PyTorch 2.4+ with CUDA</li>
+                        <li>PyTorch Geometric (HGTConv)</li>
+                        <li>Polars for data processing</li>
+                        <li>Flask + Jinja for web UI</li>
+                        <li>Pydantic for configuration</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 15: Summary -->
+        <div class="slide">
+            <p class="section-num">14</p>
+            <h2>Summary</h2>
+            <ul>
+                <li><strong>Two-stage pipeline:</strong> retrieval via two-tower, reranking via MLP fusion</li>
+                <li><strong>Calendar integration:</strong> availability as a first-class ranking signal</li>
+                <li><strong>Social modeling:</strong> friend intent and feasibility boost event scores</li>
+                <li><strong>Graph learning:</strong> HGT captures multi-relational patterns in user-event-venue graph</li>
+                <li><strong>Temporal integrity:</strong> strict time-based splits prevent data leakage</li>
+                <li><strong>Explainability:</strong> users see why each event is recommended</li>
+            </ul>
+            <div class="code-block" style="margin-top: 2rem;">
+                <code># Run the demo
+make demo
+
+# Access at http://localhost:8000</code>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav">
+        <button id="prevBtn" onclick="prevSlide()">← Previous</button>
+        <span class="progress-info"><span id="current">1</span> / <span id="total">14</span></span>
+        <button id="nextBtn" onclick="nextSlide()">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        const progress = document.getElementById('progress');
+        const currentEl = document.getElementById('current');
+        const totalEl = document.getElementById('total');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        totalEl.textContent = totalSlides;
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+            progress.style.width = ((currentSlide + 1) / totalSlides * 100) + '%';
+            currentEl.textContent = currentSlide + 1;
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        // Touch support
+        let touchStartX = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
+        document.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const diff = touchStartX - touchEndX;
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) nextSlide();
+                else prevSlide();
+            }
+        });
+
+        updateSlide();
+    </script>
+</body>
+</html>

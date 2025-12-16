@@ -265,6 +265,17 @@ def get_user_feed(user_id: int, top_k: int = 50) -> list[dict]:
     # Sort by final score
     candidates.sort(key=lambda x: x["final_score"], reverse=True)
 
+    # Normalize scores to 0-100 range for better UX
+    if len(candidates) > 1:
+        scores = [c["final_score"] for c in candidates]
+        min_score, max_score = min(scores), max(scores)
+        score_range = max_score - min_score if max_score != min_score else 1
+        for c in candidates:
+            c["display_score"] = round(100 * (c["final_score"] - min_score) / score_range, 1)
+    else:
+        for c in candidates:
+            c["display_score"] = 50.0
+
     # Add event details
     result = []
     for c in candidates[:top_k]:
@@ -283,6 +294,7 @@ def get_user_feed(user_id: int, top_k: int = 50) -> list[dict]:
             "category": int(event_row["category"][0]),
             "capacity": int(event_row["capacity"][0]),
             "final_score": round(c["final_score"], 4),
+            "display_score": c["display_score"],
             "tt_score": round(c["tt_score"], 4),
             "availability_fit": c["availability_fit"],
             "next_feasible_hours": round(c["next_feasible_hours"], 1) if c["next_feasible_hours"] > 0 else None,

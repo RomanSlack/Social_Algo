@@ -304,6 +304,9 @@ def evaluate(
     total_loss = 0
     n_batches = 0
 
+    if len(val_loader) == 0:
+        return {"val_loss": 0.0}
+
     with torch.no_grad():
         for batch in val_loader:
             user_features = {k: v.to(device) for k, v in batch["user_features"].items()}
@@ -346,7 +349,7 @@ def evaluate(
             total_loss += loss.item()
             n_batches += 1
 
-    return {"val_loss": total_loss / n_batches}
+    return {"val_loss": total_loss / max(n_batches, 1)}
 
 
 def main():

@@ -14,8 +14,9 @@ from torch_geometric.data import HeteroData
 from torch_geometric.nn import HGTConv, Linear
 from torch_geometric.loader import LinkNeighborLoader
 import numpy as np
+import polars as pl
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class TemporalHeteroGNN(nn.Module):
@@ -82,7 +83,6 @@ class TemporalHeteroGNN(nn.Module):
                 out_channels=hidden_dim,
                 metadata=(self.node_types, self.edge_types),
                 heads=num_heads,
-                dropout=dropout,
             )
             self.convs.append(conv)
 
@@ -318,7 +318,6 @@ def build_hetero_graph(
     base_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     cutoff_time = base_time + timedelta(days=cutoff_day)
 
-    from datetime import timedelta
     actions_filtered = actions_df.filter(pl.col("ts") < cutoff_time)
 
     # User-event edges by action type
@@ -380,6 +379,3 @@ def extract_gnn_embeddings(
     return user_emb, event_emb
 
 
-# Need polars import for build_hetero_graph
-import polars as pl
-from datetime import timedelta

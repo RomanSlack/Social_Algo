@@ -165,9 +165,14 @@ def generate_events(cfg: DataConfig, venues: pl.DataFrame) -> pl.DataFrame:
         for i in range(cfg.n_events)
     ]
 
+    # Convert numpy types to native Python types
+    durations = [int(d) for d in durations]
+    categories = [int(c) for c in categories]
+    capacities = [int(c) for c in capacities]
+
     events = pl.DataFrame({
         "event_id": list(range(cfg.n_events)),
-        "venue_id": event_venue_ids,
+        "venue_id": [int(v) for v in event_venue_ids],
         "start_time": start_times,
         "duration_min": durations,
         "category": categories,

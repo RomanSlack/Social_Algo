@@ -51,6 +51,12 @@ class SmallDataConfig(DataConfig):
     n_venues: int = 50
     n_events: int = 3000
     n_communities: int = 5
+    # Higher action rates for small mode to get enough training data
+    base_view_prob: float = 0.5
+    base_like_prob: float = 0.2
+    base_save_prob: float = 0.1
+    base_intent_prob: float = 0.08
+    base_attend_prob: float = 0.05
 
 
 class ModelConfig(BaseModel):
